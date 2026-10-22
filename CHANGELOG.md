@@ -1,6 +1,6 @@
 # Changelog
 
-Versions follow the git history of this repository. Every release is a tag on `master`.
+Versions follow the git history of this repository. Every release is a tag on `master`. **v1.1.0 is the first public release.**
 
 ## 1.1.0
 
