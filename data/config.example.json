@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "listen": "0.0.0.0",
+  "port": 62991,
+  "address": null,
+  "notify": {
+    "desktopFile": true,
+    "toast": true,
+    "mail": true,
+    "mailConfig": null
+  },
+  "_comment": "copy to config.json to override"
+}

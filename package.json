@@ -1,0 +1,57 @@
+{
+  "name": "dsh-lan-remote",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Expose the running DeepSeek Harness web GUI to the LAN through a loopback reverse proxy, and announce the token URL.",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "notify.ps1",
+    "mail-config.ps1",
+    "icon.svg",
+    "data/config.example.json",
+    "README.md",
+    "README.zh.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/1731988818/dsh-lan-remote.git"
+  },
+  "bugs": {
+    "url": "https://github.com/1731988818/dsh-lan-remote/issues"
+  },
+  "homepage": "https://github.com/1731988818/dsh-lan-remote#readme",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "cordis",
+    "lan",
+    "remote",
+    "mobile",
+    "reverse-proxy"
+  ],
+  "license": "MIT",
+  "author": "1731988818",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  }
+}

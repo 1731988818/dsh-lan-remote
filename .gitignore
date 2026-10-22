@@ -1,0 +1,10 @@
+node_modules/
+*.tgz
+*.log
+.DS_Store
+Thumbs.db
+
+# Runtime data: machine-specific settings, the DPAPI-encrypted mail password,
+# the announcement log and the current token URL. Only the example ships.
+data/*
+!data/config.example.json

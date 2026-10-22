@@ -1,0 +1,98 @@
+﻿param(
+    [Parameter(Mandatory = $true)][string]$Url,
+    [string]$DesktopFile = '1',
+    [string]$Toast = '1',
+    [string]$Mail = '0',
+    [string]$MailConfig = '',
+    [string]$MailAuth = '',
+    [string]$LogFile = ''
+)
+
+$ErrorActionPreference = 'Continue'
+
+function Write-Log([string]$message) {
+    if ([string]::IsNullOrWhiteSpace($LogFile)) { return }
+    try {
+        Add-Content -LiteralPath $LogFile -Value ('{0} {1}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $message) -Encoding UTF8
+    } catch { }
+}
+
+Write-Log "notify url=$Url desktop=$DesktopFile toast=$Toast mail=$Mail"
+
+if ($DesktopFile -eq '1') {
+    try {
+        $desktop = [Environment]::GetFolderPath('Desktop')
+        if ([string]::IsNullOrWhiteSpace($desktop)) { $desktop = Join-Path $env:USERPROFILE 'Desktop' }
+        if (Test-Path -LiteralPath $desktop) {
+            $path = Join-Path $desktop 'DSH-手机访问网址.txt'
+            $body = "DSH 局域网访问地址`r`n`r`n$Url`r`n`r`n手机需与本机处于同一 Wi-Fi；打开该地址即可操作电脑上的同一个 DSH 会话。`r`n更新于 $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`r`n"
+            Set-Content -LiteralPath $path -Value $body -Encoding UTF8
+            Write-Log "desktop file written: $path"
+        } else {
+            Write-Log "desktop directory missing: $desktop"
+        }
+    } catch {
+        Write-Log "desktop file failed: $($_.Exception.Message)"
+    }
+}
+
+if ($Toast -eq '1') {
+    try {
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+        $icon = New-Object System.Windows.Forms.NotifyIcon
+        $icon.Icon = [System.Drawing.SystemIcons]::Information
+        $icon.BalloonTipTitle = 'DSH 局域网访问'
+        $icon.BalloonTipText = $Url
+        $icon.Visible = $true
+        $icon.ShowBalloonTip(8000)
+        Start-Sleep -Seconds 9
+        $icon.Dispose()
+        Write-Log 'toast shown'
+    } catch {
+        Write-Log "toast failed: $($_.Exception.Message)"
+    }
+}
+
+if ($Mail -eq '1' -and -not [string]::IsNullOrWhiteSpace($MailConfig) -and (Test-Path -LiteralPath $MailConfig)) {
+    try {
+        $config = Get-Content -LiteralPath $MailConfig -Raw -Encoding UTF8 | ConvertFrom-Json
+        $authPath = $MailAuth
+        if ([string]::IsNullOrWhiteSpace($authPath)) {
+            $authPath = Join-Path (Split-Path -Parent $MailConfig) 'auth.bin'
+        }
+        if (-not (Test-Path -LiteralPath $authPath)) {
+            Write-Log "mail skipped: auth file missing ($authPath)"
+            Write-Output 'MAIL_SKIP auth file missing'
+        } else {
+            $secure = (Get-Content -LiteralPath $authPath -Raw -Encoding UTF8).Trim() | ConvertTo-SecureString
+            $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+            try {
+                $password = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+            } finally {
+                [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+            }
+            $message = New-Object System.Net.Mail.MailMessage
+            $message.From = New-Object System.Net.Mail.MailAddress($config.user)
+            $message.To.Add($config.to)
+            $message.Subject = '[DSH-LAN] 手机访问地址'
+            $message.SubjectEncoding = [System.Text.Encoding]::UTF8
+            $message.BodyEncoding = [System.Text.Encoding]::UTF8
+            $message.Body = "DSH 局域网访问地址（手机需与本机处于同一 Wi-Fi）：`r`n`r`n$Url`r`n`r`n发送时间：$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`r`n"
+            $client = New-Object System.Net.Mail.SmtpClient($config.smtpServer, [int]$config.port)
+            $client.EnableSsl = $true
+            $client.Credentials = New-Object System.Net.NetworkCredential($config.user, $password)
+            $client.Send($message)
+            $message.Dispose()
+            $client.Dispose()
+            Write-Log "mail sent to $($config.to)"
+            Write-Output "MAIL_OK $($config.to)"
+        }
+    } catch {
+        Write-Log "mail failed: $($_.Exception.Message)"
+        Write-Output "MAIL_FAIL $($_.Exception.Message)"
+    }
+} elseif ($Mail -eq '1') {
+    Write-Log "mail skipped: no config file ($MailConfig)"
+    Write-Output 'MAIL_SKIP no smtp config'
+}
