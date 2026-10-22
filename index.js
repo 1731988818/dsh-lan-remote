@@ -213,6 +213,7 @@ function responseHeaders(upstream, targetAuthority, clientAuthority) {
 function createProxy({ listenHost, listenPort, targetHost, targetPort }) {
   const targetAuthority = authority(targetHost, targetPort)
 
+  const sockets = new Set()
   const server = http.createServer((request, response) => {
     const clientAuthority = typeof request.headers.host === 'string' ? request.headers.host : null
     const upstream = http.request(
@@ -260,7 +261,12 @@ function createProxy({ listenHost, listenPort, targetHost, targetPort }) {
     socket.on('error', () => upstream.destroy())
   })
 
+  server.on('connection', (socket) => {
+    sockets.add(socket)
+    socket.on('close', () => sockets.delete(socket))
+  })
   server.on('clientError', (error, socket) => socket.destroy())
+  server.__lanSockets = sockets
   return { server, targetAuthority }
 }
 
@@ -270,8 +276,31 @@ function closeServer(server) {
       resolve()
       return
     }
-    server.close(() => resolve())
-    server.closeAllConnections?.()
+    const sockets = server.__lanSockets
+    let settled = false
+    const finish = () => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolve()
+    }
+    const destroyAll = () => {
+      if (!sockets) return
+      for (const socket of sockets) {
+        try {
+          socket.destroy()
+        } catch {
+          /* already gone */
+        }
+      }
+    }
+    const timer = setTimeout(() => {
+      destroyAll()
+      finish()
+    }, 1500)
+    server.close(() => finish())
+    if (typeof server.closeAllConnections === 'function') server.closeAllConnections()
+    destroyAll()
   })
 }
 
@@ -506,6 +535,7 @@ async function stopProxy() {
   const server = state.proxy
   state.proxy = null
   state.running = false
+  state.starting = false
   await closeServer(server)
 }
 
@@ -622,13 +652,19 @@ async function handleRestart(request, response, ctx) {
     response.end(JSON.stringify({ error: 'method-not-allowed' }))
     return
   }
-  await stopProxy()
-  state.url = null
-  state.remoteUrl = null
-  state.remoteHost = null
-  state.startedAt = null
-  await startProxy(ctx)
-  jsonResponse(response, 200, snapshot())
+  try {
+    await stopProxy()
+    state.url = null
+    state.remoteUrl = null
+    state.remoteHost = null
+    state.startedAt = null
+    await startProxy(ctx)
+    jsonResponse(response, 200, snapshot())
+  } catch (error) {
+    state.error = error.message
+    warn('restart failed:', error.message)
+    jsonResponse(response, 500, { ...snapshot(), error: error.message })
+  }
 }
 
 export const inject = ['webServer', 'connection']

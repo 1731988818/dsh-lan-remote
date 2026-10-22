@@ -457,6 +457,63 @@ window.__ModuleLoader__.load({
         color: feedback === 'ok' ? successColor : errorColor,
         minHeight: '16px',
       }
+      const statusRow = {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '8px',
+        minHeight: '24px',
+      }
+      const sectionHeader = {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '6px',
+      }
+      const miniButton = {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '5px',
+        minHeight: '24px',
+        padding: '0 8px',
+        borderRadius: '7px',
+        border: '1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.12))',
+        background: 'transparent',
+        color: 'var(--dsw-alias-label-primary, #111827)',
+        fontSize: '11.5px',
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        transition: 'filter .12s ease',
+      }
+      const divider = {
+        height: '1px',
+        background: 'var(--dsw-alias-border-l1, rgba(0,0,0,.10))',
+        margin: '1px 0',
+      }
+      const urlMono = {
+        font: '11.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+      }
+      const addressBlock = (label, value, which, copiedFlag) => h(
+        'div',
+        { style: { display: 'flex', flexDirection: 'column', gap: '5px' } },
+        h('div', { style: sectionHeader },
+          h('div', { style: sectionLabel }, label),
+          h('button', {
+            type: 'button',
+            className: 'dsh-lan-remote-action',
+            style: miniButton,
+            onClick: () => copy(value, which),
+          }, copiedFlag
+            ? '✓ 已复制'
+            : h('span', { style: { display: 'inline-flex', gap: '4px', alignItems: 'center' } }, iconCopy, '复制')),
+        ),
+        h('textarea', {
+          style: { ...urlStyle, height: '46px' },
+          readOnly: true,
+          value,
+          onFocus: (event) => event.currentTarget.select(),
+        }),
+      )
 
       const handset = h(
         'button',
@@ -580,66 +637,35 @@ window.__ModuleLoader__.load({
       const mainBody = h(
         React.Fragment,
         null,
-        h('div', { style: hintStyle }, statusText),
+        h('div', { style: statusRow },
+          h('div', { style: { ...hintStyle, ...urlMono, fontSize: '11px' }, title: statusText }, statusText),
+          h('button', {
+            type: 'button',
+            className: 'dsh-lan-remote-action',
+            style: miniButton,
+            disabled: busy,
+            title: '重新探测本机局域网地址',
+            onClick: probe,
+          }, h('span', {
+            style: { display: 'inline-flex', gap: '4px', alignItems: 'center', opacity: busy ? 0.6 : 1 },
+          }, iconRefresh, busy ? '探测中…' : '重新探测')),
+        ),
+        h('div', { style: divider }),
         running ? h(
           'div',
           { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
-          h('div', { style: sectionLabel }, '局域网（同一 Wi-Fi）'),
-          h('textarea', {
-            style: { ...urlStyle, height: '56px' },
-            readOnly: true,
-            value: url,
-            onFocus: (event) => event.currentTarget.select(),
-          }),
+          addressBlock('局域网（同一 Wi-Fi）', url, 'lan', copied),
+          remoteUrl
+            ? addressBlock('异地（Tailscale）', remoteUrl, 'remote', copiedRemote)
+            : h('div', { style: hintStyle }, tailscale?.available === false
+              ? '异地访问：本机未登录 Tailscale。安装 Tailscale 并用同一账号登录后，这里会自动出现异地地址（手机端也要装 Tailscale 并登录）。'
+              : '异地访问：正在获取 Tailscale 地址…'),
+          h('div', { style: divider }),
           h('div', { style: actionRow },
             h('button', {
               type: 'button',
               className: 'dsh-lan-remote-action',
-              style: actionButton(false),
-              onClick: () => copy(url, 'lan'),
-            }, copied ? '✓ 已复制' : h('span', { style: { display: 'inline-flex', gap: '5px', alignItems: 'center' } }, iconCopy, '复制地址')),
-            h('button', {
-              type: 'button',
-              className: 'dsh-lan-remote-action',
-              style: actionButton(false),
-              disabled: busy,
-              title: '重新探测本机局域网地址',
-              onClick: probe,
-            }, h('span', {
-              style: {
-                display: 'inline-flex',
-                gap: '5px',
-                alignItems: 'center',
-                opacity: busy ? 0.6 : 1,
-              },
-            }, iconRefresh, busy ? '探测中…' : '重新探测')),
-          ),
-          remoteUrl ? h(
-            React.Fragment,
-            null,
-            h('div', { style: sectionLabel }, '异地（Tailscale）'),
-            h('textarea', {
-              style: { ...urlStyle, height: '56px' },
-              readOnly: true,
-              value: remoteUrl,
-              onFocus: (event) => event.currentTarget.select(),
-            }),
-            h('div', { style: actionRow },
-              h('button', {
-                type: 'button',
-                className: 'dsh-lan-remote-action',
-                style: actionButton(false),
-                onClick: () => copy(remoteUrl, 'remote'),
-              }, copiedRemote ? '✓ 已复制' : h('span', { style: { display: 'inline-flex', gap: '5px', alignItems: 'center' } }, iconCopy, '复制异地地址')),
-            ),
-          ) : h('div', { style: hintStyle }, tailscale?.available === false
-            ? '异地访问：本机未登录 Tailscale。安装 Tailscale 并用同一账号登录后，这里会自动出现异地地址（手机端也要装 Tailscale 并登录）。'
-            : '异地访问：正在获取 Tailscale 地址…'),
-          h('div', { style: actionRow },
-            h('button', {
-              type: 'button',
-              className: 'dsh-lan-remote-action',
-              style: actionButton(false),
+              style: { ...actionButton(false), flex: '1 1 0' },
               disabled: mailBusy,
               title: '把当前地址发到已配置的邮箱',
               onClick: sendMail,
@@ -647,7 +673,7 @@ window.__ModuleLoader__.load({
             h('button', {
               type: 'button',
               className: 'dsh-lan-remote-action',
-              style: actionButton(false),
+              style: { ...actionButton(false), flex: '1 1 0' },
               title: '配置 SMTP 服务器与授权码',
               onClick: () => { setView('mail'); setMailMsg(null) },
             }, h('span', { style: { display: 'inline-flex', gap: '5px', alignItems: 'center' } }, iconGear, '邮件设置')),
@@ -660,7 +686,8 @@ window.__ModuleLoader__.load({
           }, mailMsg?.text ?? feedbackText),
           h('div', { style: hintStyle }, mailInfo),
         ) : h('div', { style: hintStyle }, '反向代理尚未运行。若刚启动 harness，请稍等几秒；仍无响应可重新探测。'),
-        h('div', { style: hintStyle }, '同一 Wi-Fi 用第一条地址；不在同一网络时，手机先打开 Tailscale 并登录同一账号，再用第二条异地地址。地址对应当前桌面会话，可直接在手机上操作，30 天内免再次认证。'),
+        h('div', { style: divider }),
+        h('div', { style: { ...hintStyle, fontSize: '10.5px' } }, '同一 Wi-Fi 用第一条地址；不在同一网络时，手机先打开 Tailscale 并登录同一账号，再用第二条异地地址。地址对应当前桌面会话，可直接在手机上操作，30 天内免再次认证。'),
       )
 
       return h(
