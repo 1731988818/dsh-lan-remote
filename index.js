@@ -123,6 +123,16 @@ function lanAddresses() {
   return found.sort((left, right) => rank(left.address) - rank(right.address))
 }
 
+/** True for the 100.64.0.0/10 CGNAT range Tailscale hands out to nodes. */
+function isTailscaleIPv4(address) {
+  const parts = address.split('.')
+  if (parts.length !== 4) return false
+  const first = Number(parts[0])
+  const second = Number(parts[1])
+  if (!Number.isInteger(first) || !Number.isInteger(second)) return false
+  return first === 100 && second >= 64 && second <= 127
+}
+
 /** The Tailscale IPv4 of this machine, if the client is up and signed in. */
 function tailscaleAddress() {
   const interfaces = networkInterfaces()
@@ -132,6 +142,9 @@ function tailscaleAddress() {
       if (entry.internal) continue
       if (entry.family !== 'IPv4' && entry.family !== 4) continue
       if (!entry.address) continue
+      // While the daemon is stopped the interface keeps only a 169.254
+      // link-local address, which is useless across the tailnet.
+      if (!isTailscaleIPv4(entry.address)) continue
       return entry.address
     }
   }

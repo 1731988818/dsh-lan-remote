@@ -2,6 +2,10 @@
 
 Versions follow the git history of this repository. Every release is a tag on `master`. **v1.1.0 is the first public release.**
 
+## 1.1.1
+
+- Fix: the remote (Tailscale) address is only accepted from the `100.64.0.0/10` range Tailscale actually assigns. With the daemon stopped, the adapter keeps only a `169.254.x.x` link-local address, which was previously reported as the remote URL — the card and the announced links then pointed at a host no phone can reach. The card now shows "本机未登录 Tailscale" instead, and picks the real address up again on the next restart once the daemon is running.
+
 ## 1.1.0
 
 - Remote access over Tailscale: when this machine is signed in to Tailscale, the plugin detects its `100.x.y.z` address and exposes a second token URL, so a phone on another network can reach the same session. The card lists both URLs (LAN + Tailscale) with their own copy buttons, and the desktop file / email / toast announce both.
