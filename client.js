@@ -595,7 +595,7 @@ window.__ModuleLoader__.load({
             h('button', {
               type: 'button',
               className: 'dsh-lan-remote-action',
-              style: actionButton(true),
+              style: actionButton(false),
               onClick: () => copy(url, 'lan'),
             }, copied ? '✓ 已复制' : h('span', { style: { display: 'inline-flex', gap: '5px', alignItems: 'center' } }, iconCopy, '复制地址')),
             h('button', {
