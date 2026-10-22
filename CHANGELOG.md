@@ -2,6 +2,12 @@
 
 Versions follow the git history of this repository. Every release is a tag on `master`.
 
+## 1.1.0
+
+- Remote access over Tailscale: when this machine is signed in to Tailscale, the plugin detects its `100.x.y.z` address and exposes a second token URL, so a phone on another network can reach the same session. The card lists both URLs (LAN + Tailscale) with their own copy buttons, and the desktop file / email / toast announce both.
+- `notify.ps1` gained `-RemoteUrl`; the desktop file and mail body now carry a "同一 Wi-Fi" and an "异地（Tailscale）" section instead of a single LAN line.
+- `GET /dsh-lan-remote/api/status` now returns `remoteHost`, `remoteUrl` and `tailscale: { available, ip }`.
+
 ## 1.0.0
 
 - Initial release: a loopback reverse proxy that exposes the running DeepSeek Harness web GUI to the LAN under the host's own launch token, so a phone drives the same session instead of booting a second harness.

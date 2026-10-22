@@ -1,5 +1,6 @@
 ﻿param(
     [Parameter(Mandatory = $true)][string]$Url,
+    [string]$RemoteUrl = '',
     [string]$DesktopFile = '1',
     [string]$Toast = '1',
     [string]$Mail = '0',
@@ -17,7 +18,7 @@ function Write-Log([string]$message) {
     } catch { }
 }
 
-Write-Log "notify url=$Url desktop=$DesktopFile toast=$Toast mail=$Mail"
+Write-Log "notify url=$Url remote=$RemoteUrl desktop=$DesktopFile toast=$Toast mail=$Mail"
 
 if ($DesktopFile -eq '1') {
     try {
@@ -25,8 +26,14 @@ if ($DesktopFile -eq '1') {
         if ([string]::IsNullOrWhiteSpace($desktop)) { $desktop = Join-Path $env:USERPROFILE 'Desktop' }
         if (Test-Path -LiteralPath $desktop) {
             $path = Join-Path $desktop 'DSH-手机访问网址.txt'
-            $body = "DSH 局域网访问地址`r`n`r`n$Url`r`n`r`n手机需与本机处于同一 Wi-Fi；打开该地址即可操作电脑上的同一个 DSH 会话。`r`n更新于 $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`r`n"
-            Set-Content -LiteralPath $path -Value $body -Encoding UTF8
+            $lines = @('DSH 手机访问地址', '', '同一 Wi-Fi：', $Url)
+            if (-not [string]::IsNullOrWhiteSpace($RemoteUrl)) {
+                $lines += @('', '异地（手机装 Tailscale 并登录同一账号）：', $RemoteUrl)
+            } else {
+                $lines += @('', '异地：本机 Tailscale 未登录，安装并登录 Tailscale 后会显示异地地址。')
+            }
+            $lines += @('', '打开上面的地址即可操作电脑上的同一个 DSH 会话。', "更新于 $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
+            Set-Content -LiteralPath $path -Value ($lines -join "`r`n") -Encoding UTF8
             Write-Log "desktop file written: $path"
         } else {
             Write-Log "desktop directory missing: $desktop"
@@ -78,7 +85,12 @@ if ($Mail -eq '1' -and -not [string]::IsNullOrWhiteSpace($MailConfig) -and (Test
             $message.Subject = '[DSH-LAN] 手机访问地址'
             $message.SubjectEncoding = [System.Text.Encoding]::UTF8
             $message.BodyEncoding = [System.Text.Encoding]::UTF8
-            $message.Body = "DSH 局域网访问地址（手机需与本机处于同一 Wi-Fi）：`r`n`r`n$Url`r`n`r`n发送时间：$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`r`n"
+            $bodyLines = @('DSH 手机访问地址（同一 Wi-Fi 用第一条）：', '', '局域网：', $Url)
+            if (-not [string]::IsNullOrWhiteSpace($RemoteUrl)) {
+                $bodyLines += @('', '异地（手机装 Tailscale 并登录同一账号）：', $RemoteUrl)
+            }
+            $bodyLines += @('', "发送时间：$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
+            $message.Body = ($bodyLines -join "`r`n")
             $client = New-Object System.Net.Mail.SmtpClient($config.smtpServer, [int]$config.port)
             $client.EnableSsl = $true
             $client.Credentials = New-Object System.Net.NetworkCredential($config.user, $password)

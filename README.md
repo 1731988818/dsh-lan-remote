@@ -1,6 +1,6 @@
 # dsh-lan-remote
 
-Expose the running DeepSeek Harness web GUI to your LAN so a phone can drive **the same** session (not a second harness instance).
+Expose the running DeepSeek Harness web GUI to your LAN so a phone can drive **the same** session (not a second harness instance). With Tailscale on both machines it also works when the phone is on another network.
 
 [![license](https://img.shields.io/badge/license-MIT-0f172a)](LICENSE)
 [![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-0.2.1%2B-2f6fed)](https://github.com/deepseek-ai/deepseek-harness)
@@ -13,6 +13,7 @@ The desktop build binds its web server to `127.0.0.1` and rejects wildcard addre
 ## Features
 
 - Reverse proxy: LAN port → `127.0.0.1:<webServer.port>`, rewriting `Host` / `Origin` / `Referer` to pass the host's auth fence (WebSocket upgrades forwarded too).
+- Two URLs: the card shows both the LAN URL (same Wi-Fi) and the Tailscale URL (any network), each with its own copy button. The remote URL appears as soon as this machine is signed in to Tailscale.
 - Floating handset button: bottom-right of the page, draggable, remembers its position; opens a card showing the current URL, a copy button and a re-detect action.
 - Announcements: on start it writes a desktop file and shows a toast; email is optional (manual button or automatic on start).
 - Mail settings: fill in your own SMTP server, port, account, app password and recipient from the card. Stored under the plugin's `data/` directory (password encrypted with Windows DPAPI). **No preset account ships with the plugin.**
@@ -44,10 +45,21 @@ Override defaults in `<profile>/cordis.patch.yml`:
       mailConfig: null     # mail config path, defaults to data/notify.config.json
 ```
 
+## Remote access (Tailscale)
+
+The proxy listens on `0.0.0.0`, so any address on any local interface works. Tailscale provides a way to reach it from another network without a public IP or a tunnel service:
+
+1. Install [Tailscale](https://tailscale.com/download) on both the computer and the phone, signed in to **the same account**.
+2. On the computer, `tailscale status` should show it online; note its `100.x.y.z` address (the plugin reads it automatically — that's the "异地（Tailscale）" entry in the card).
+3. Keep Tailscale connected on the phone and open the second URL.
+
+Emails and the desktop file also list both addresses. If the card shows no remote URL, Tailscale isn't running or signed in on this machine; after signing in, reopen the card or press re-detect.
+
 ## Notes
 
 - The `?token=` in the URL is a credential equivalent to a login session; don't share or screenshot it.
-- Plain HTTP by default — use it on trusted networks only; add TLS or a tunnel for the public internet.
+- Plain HTTP by default — use it on trusted networks or inside your Tailscale tailnet only; add TLS or a tunnel for the public internet.
+- The Tailscale URL sits behind the same auth fence: a bare IP returns 401, so the full token URL is required.
 - The phone needs the full token URL once; the browser then keeps a 30-day session.
 - After sleep or a network switch, press the re-detect button to refresh the address.
 

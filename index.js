@@ -57,6 +57,9 @@ const state = {
   starting: false,
   url: null,
   lanHost: null,
+  remoteHost: null,
+  remoteUrl: null,
+  tailscale: null,
   listenHost: null,
   listenPort: null,
   targetHost: null,
@@ -118,6 +121,21 @@ function lanAddresses() {
     return 2
   }
   return found.sort((left, right) => rank(left.address) - rank(right.address))
+}
+
+/** The Tailscale IPv4 of this machine, if the client is up and signed in. */
+function tailscaleAddress() {
+  const interfaces = networkInterfaces()
+  for (const [name, entries] of Object.entries(interfaces)) {
+    if (!/tailscale/i.test(name)) continue
+    for (const entry of entries ?? []) {
+      if (entry.internal) continue
+      if (entry.family !== 'IPv4' && entry.family !== 4) continue
+      if (!entry.address) continue
+      return entry.address
+    }
+  }
+  return null
 }
 
 async function readConfig() {
@@ -395,6 +413,7 @@ async function handleMail(request, response) {
   const result = await runPowerShell([
     '-File', NOTIFY_SCRIPT,
     '-Url', state.url,
+    ...(state.remoteUrl ? ['-RemoteUrl', state.remoteUrl] : []),
     '-DesktopFile', '0',
     '-Toast', '0',
     '-Mail', '1',
@@ -453,7 +472,7 @@ function fallbackMailConfig(config) {
   return null
 }
 
-async function announce(url, config) {
+async function announce(url, config, remoteUrl) {
   if (!existsSync(NOTIFY_SCRIPT)) {
     state.notify = { skipped: 'notify.ps1 missing' }
     return
@@ -467,6 +486,7 @@ async function announce(url, config) {
     '-Mail', mailConfig ? '1' : '0',
     '-LogFile', join(DATA_DIR, 'notify.log'),
   ]
+  if (remoteUrl) args.push('-RemoteUrl', remoteUrl)
   if (mailConfig) args.push('-MailConfig', mailConfig)
   const result = await runPowerShell(args)
   state.notify = {
@@ -538,9 +558,18 @@ async function startProxy(ctx) {
     state.error = null
     const connection = ctx.connection ?? ctx.get?.('connection')
     state.url = urlFor(connection, lanHost, listenPort)
+    const remoteHost = tailscaleAddress()
+    state.remoteHost = remoteHost
+    state.tailscale = remoteHost
+      ? { available: true, ip: remoteHost }
+      : { available: false, ip: null }
+    // The listen socket is 0.0.0.0, so the Tailscale address is reachable too;
+    // it only needs its own token URL for the phone to open out of the house.
+    state.remoteUrl = remoteHost ? urlFor(connection, remoteHost, listenPort) : null
     log(`listening on ${listenHost}:${listenPort} -> ${authority(targetHost, targetPort)}`)
     log(`url ${state.url}`)
-    void announce(state.url, config).catch((error) => warn('announce failed:', error.message))
+    if (state.remoteUrl) log(`remote url ${state.remoteUrl}`)
+    void announce(state.url, config, state.remoteUrl).catch((error) => warn('announce failed:', error.message))
     return snapshot()
   } catch (error) {
     state.error = error.message
@@ -557,6 +586,9 @@ function snapshot() {
     running: state.running,
     url: state.url,
     lanHost: state.lanHost,
+    remoteHost: state.remoteHost,
+    remoteUrl: state.remoteUrl,
+    tailscale: state.tailscale,
     listenHost: state.listenHost,
     listenPort: state.listenPort,
     targetHost: state.targetHost,
@@ -592,6 +624,8 @@ async function handleRestart(request, response, ctx) {
   }
   await stopProxy()
   state.url = null
+  state.remoteUrl = null
+  state.remoteHost = null
   state.startedAt = null
   await startProxy(ctx)
   jsonResponse(response, 200, snapshot())

@@ -129,6 +129,7 @@ window.__ModuleLoader__.load({
       const { data, failed, reload } = useStatus()
       const [open, setOpen] = useState(false)
       const [copied, setCopied] = useState(false)
+      const [copiedRemote, setCopiedRemote] = useState(false)
       const [busy, setBusy] = useState(false)
       const [feedback, setFeedback] = useState(null)
       const [hover, setHover] = useState(false)
@@ -146,6 +147,8 @@ window.__ModuleLoader__.load({
 
       const running = Boolean(data?.running)
       const url = data?.url ?? ''
+      const remoteUrl = data?.remoteUrl ?? ''
+      const tailscale = data?.tailscale ?? null
       const error = data?.error ?? null
       const dot = failed ? errorColor : running ? successColor : warnColor
       const statusText = failed
@@ -233,16 +236,17 @@ window.__ModuleLoader__.load({
         setOpen((value) => !value)
       }, [])
 
-      const copy = useCallback(async () => {
-        if (!url) return
+      const copy = useCallback(async (text, which) => {
+        if (!text) return
         try {
-          await navigator.clipboard.writeText(url)
-          setCopied(true)
-          setTimeout(() => setCopied(false), 1600)
+          await navigator.clipboard.writeText(text)
+          const setter = which === 'remote' ? setCopiedRemote : setCopied
+          setter(true)
+          setTimeout(() => setter(false), 1600)
         } catch {
           flash('fail')
         }
-      }, [url, flash])
+      }, [flash])
 
       const probe = useCallback(async () => {
         if (busy) return
@@ -419,6 +423,13 @@ window.__ModuleLoader__.load({
         wordBreak: 'break-all',
       }
       const actionRow = { display: 'flex', gap: '8px', alignItems: 'stretch' }
+      const sectionLabel = {
+        fontSize: '11px',
+        fontWeight: 600,
+        letterSpacing: '.02em',
+        opacity: 0.68,
+        marginTop: '2px',
+      }
       const actionButton = (primary) => ({
         display: 'inline-flex',
         alignItems: 'center',
@@ -573,6 +584,7 @@ window.__ModuleLoader__.load({
         running ? h(
           'div',
           { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+          h('div', { style: sectionLabel }, '局域网（同一 Wi-Fi）'),
           h('textarea', {
             style: { ...urlStyle, height: '56px' },
             readOnly: true,
@@ -584,7 +596,7 @@ window.__ModuleLoader__.load({
               type: 'button',
               className: 'dsh-lan-remote-action',
               style: actionButton(true),
-              onClick: copy,
+              onClick: () => copy(url, 'lan'),
             }, copied ? '✓ 已复制' : h('span', { style: { display: 'inline-flex', gap: '5px', alignItems: 'center' } }, iconCopy, '复制地址')),
             h('button', {
               type: 'button',
@@ -602,6 +614,27 @@ window.__ModuleLoader__.load({
               },
             }, iconRefresh, busy ? '探测中…' : '重新探测')),
           ),
+          remoteUrl ? h(
+            React.Fragment,
+            null,
+            h('div', { style: sectionLabel }, '异地（Tailscale）'),
+            h('textarea', {
+              style: { ...urlStyle, height: '56px' },
+              readOnly: true,
+              value: remoteUrl,
+              onFocus: (event) => event.currentTarget.select(),
+            }),
+            h('div', { style: actionRow },
+              h('button', {
+                type: 'button',
+                className: 'dsh-lan-remote-action',
+                style: actionButton(false),
+                onClick: () => copy(remoteUrl, 'remote'),
+              }, copiedRemote ? '✓ 已复制' : h('span', { style: { display: 'inline-flex', gap: '5px', alignItems: 'center' } }, iconCopy, '复制异地地址')),
+            ),
+          ) : h('div', { style: hintStyle }, tailscale?.available === false
+            ? '异地访问：本机未登录 Tailscale。安装 Tailscale 并用同一账号登录后，这里会自动出现异地地址（手机端也要装 Tailscale 并登录）。'
+            : '异地访问：正在获取 Tailscale 地址…'),
           h('div', { style: actionRow },
             h('button', {
               type: 'button',
@@ -627,7 +660,7 @@ window.__ModuleLoader__.load({
           }, mailMsg?.text ?? feedbackText),
           h('div', { style: hintStyle }, mailInfo),
         ) : h('div', { style: hintStyle }, '反向代理尚未运行。若刚启动 harness，请稍等几秒；仍无响应可重新探测。'),
-        h('div', { style: hintStyle }, '手机与电脑连同一 Wi-Fi，用手机浏览器打开上方地址；30 天内免再次输入。地址对应当前桌面会话，可在手机上直接操作。'),
+        h('div', { style: hintStyle }, '同一 Wi-Fi 用第一条地址；不在同一网络时，手机先打开 Tailscale 并登录同一账号，再用第二条异地地址。地址对应当前桌面会话，可直接在手机上操作，30 天内免再次认证。'),
       )
 
       return h(
