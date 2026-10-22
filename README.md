@@ -2,6 +2,12 @@
 
 Expose the running DeepSeek Harness web GUI to your LAN so a phone can drive **the same** session (not a second harness instance).
 
+[![license](https://img.shields.io/badge/license-MIT-0f172a)](LICENSE)
+[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-0.2.1%2B-2f6fed)](https://github.com/deepseek-ai/deepseek-harness)
+[![dsh-plugin](https://img.shields.io/badge/dsh-plugin-topic-2f6fed)](https://github.com/topics/dsh-plugin)
+
+English | [中文](README.zh.md)
+
 The desktop build binds its web server to `127.0.0.1` and rejects wildcard addresses such as `0.0.0.0`. This plugin leaves that binding alone and starts a reverse proxy on `0.0.0.0:<port>` that forwards to the host's loopback port, so the phone talks to the instance the desktop app is already using.
 
 ## Features
@@ -15,10 +21,10 @@ The desktop build binds its web server to `127.0.0.1` and rejects wildcard addre
 ## Install
 
 ```bash
-dsh plugin --profile <profile> add /path/to/dsh-lan-remote
+dsh plugin --profile <profile> add github:1731988818/dsh-lan-remote
 ```
 
-Or link the directory into `<profile>/node_modules/` and register it in the profile's `package.json`.
+`dsh plugin add` writes it into the profile's `dependencies` and `dsh.profile.bundles`, so it starts with the harness after a reload; `dsh plugin remove` unregisters it. You can also link the directory into `<profile>/node_modules/` and register it yourself.
 
 ## Configuration
 

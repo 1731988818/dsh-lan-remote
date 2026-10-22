@@ -2,6 +2,12 @@
 
 把正在运行的 DeepSeek Harness Web GUI 暴露到局域网，让手机访问**同一个**会话（不是另起一个 harness）。
 
+[![license](https://img.shields.io/badge/license-MIT-0f172a)](LICENSE)
+[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-0.2.1%2B-2f6fed)](https://github.com/deepseek-ai/deepseek-harness)
+[![dsh-plugin](https://img.shields.io/badge/dsh-plugin-topic-2f6fed)](https://github.com/topics/dsh-plugin)
+
+[English](README.md) | 中文
+
 DeepSeek Harness 桌面版把 web 服务绑定在 `127.0.0.1`，且拒绝 `0.0.0.0` 之类的通配地址。本插件不改变宿主绑定，而是在 `0.0.0.0:<端口>` 上起一个反向代理，把请求转发到宿主正在监听的 loopback 端口，因此手机打开的就是桌面端当前那一个实例。
 
 ## 功能
@@ -15,10 +21,10 @@ DeepSeek Harness 桌面版把 web 服务绑定在 `127.0.0.1`，且拒绝 `0.0.0
 ## 安装
 
 ```bash
-dsh plugin --profile <profile> add /path/to/dsh-lan-remote
+dsh plugin --profile <profile> add github:1731988818/dsh-lan-remote
 ```
 
-或把目录链接到 `<profile>/node_modules/` 并在 profile 的 `package.json` 里登记。
+`dsh plugin add` 会把它写进 profile 的 `dependencies` 和 `dsh.profile.bundles`，重载后插件随 harness 启动；`dsh plugin remove` 反过来注销。也可以把目录链接到 `<profile>/node_modules/` 后自行登记。
 
 ## 配置
 
