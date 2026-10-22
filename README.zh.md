@@ -27,6 +27,8 @@ dsh plugin --profile <profile> add github:1731988818/dsh-lan-remote
 
 `dsh plugin add` 会把它写进 profile 的 `dependencies` 和 `dsh.profile.bundles`，重载后插件随 harness 启动；`dsh plugin remove` 反过来注销。也可以把目录链接到 `<profile>/node_modules/` 后自行登记。
 
+如果安装一直停在 `Progress: resolved ... added 0`，通常是 `<profile>/node_modules/` 里已经有同名的旧链接（比如先前用 `file:` 方式链接安装过）。pnpm 需要替换该目录，而 Windows 上被占用的链接会让它不断重试、始终不完成。先停用插件，删除 `<profile>/node_modules/dsh-lan-remote` 以及 `<profile>/node_modules/.ignored/*_tmp_*`，再执行上面的命令，一般几秒即可装完。
+
 ## 配置
 
 在 `<profile>/cordis.patch.yml` 中可覆盖默认值：

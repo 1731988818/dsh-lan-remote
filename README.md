@@ -27,6 +27,8 @@ dsh plugin --profile <profile> add github:1731988818/dsh-lan-remote
 
 `dsh plugin add` writes it into the profile's `dependencies` and `dsh.profile.bundles`, so it starts with the harness after a reload; `dsh plugin remove` unregisters it. You can also link the directory into `<profile>/node_modules/` and register it yourself.
 
+If the install hangs at `Progress: resolved ... added 0`, `<profile>/node_modules/` most likely still holds an old link under the same name (for instance from an earlier `file:` install). pnpm has to replace that directory, and on Windows a link that is in use makes it retry forever. Disable the plugin, delete `<profile>/node_modules/dsh-lan-remote` and `<profile>/node_modules/.ignored/*_tmp_*`, then run the command again — it normally finishes in a few seconds.
+
 ## Configuration
 
 Override defaults in `<profile>/cordis.patch.yml`:
